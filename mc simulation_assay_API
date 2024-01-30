@@ -1,0 +1,135 @@
+
+# Monte Carlo Simulation Assay API
+
+# Load necessary libraries
+library(ggplot2)
+
+# Function to plot histogram for a variable
+plot_histogram <- function(data, title, x_label, bin_width, fill_color, limit_lower, limit_upper) {
+  p <- ggplot(data, aes(x=value)) +
+    geom_histogram(binwidth=bin_width, fill=fill_color, alpha=0.7) +
+    labs(title=title, x=x_label, y="Frequency") +
+    geom_vline(aes(xintercept=limit_lower, linetype="Lower Limit", color="Lower Limit"), size=1) +
+    geom_vline(aes(xintercept=limit_upper, linetype="Upper Limit", color="Upper Limit"), size=1) +
+    scale_linetype_manual("Limits", values=c("Lower Limit" = "dashed", "Upper Limit" = "dashed")) +
+    scale_color_manual("Limits", values=c("Lower Limit" = "red", "Upper Limit" = "blue"))
+  print(p)
+}
+
+# Number of Monte Carlo iterations
+n <- 10000
+
+# Generate random variables based on initial normal distributions
+LOD <- rnorm(n, 0.2, 0.05)
+Total_Impurities <- rnorm(n, 0.1, 0.02)
+Solv1 <- rnorm(n, 0.1, 0.02)
+Solv2 <- rnorm(n, 0.1, 0.02)
+Solv3 <- rnorm(n, 0.02, 0.005)
+
+# Plot initial distributions
+plot_histogram(data.frame(value=LOD), "Initial Distribution of LOD", "LOD", 0.01, "blue", 0, 0.5)
+plot_histogram(data.frame(value=Total_Impurities), "Initial Distribution of Total Impurities", "Total Impurities", 0.005, "green", 0, 0.5)
+plot_histogram(data.frame(value=Solv1), "Initial Distribution of Solv1", "Solv1", 0.005, "purple", 0, 0.3)
+plot_histogram(data.frame(value=Solv2), "Initial Distribution of Solv2", "Solv2", 0.005, "orange", 0, 0.3)
+plot_histogram(data.frame(value=Solv3), "Initial Distribution of Solv3", "Solv3", 0.001, "brown", 0, 0.08)
+
+
+# Calculate Assay using the transfer function
+Assay <- 101.255 - (4.647 * LOD) - (22.58 * Total_Impurities) - (210.4 * Solv1) + (125.8 * Solv2) + (171.0 * Solv3)
+
+# Plot initial Assay distribution
+
+ggplot(data.frame(Assay), aes(x=Assay)) +
+  geom_histogram(binwidth=0.1, fill="blue", alpha=0.7) +
+  geom_segment(aes(x = 98, y = 0, xend = 98, yend = Inf, color = "Lower Limit: 98.0%", linetype = "Lower Limit: 98.0%"), size = 1.5) +
+  geom_segment(aes(x = 102, y = 0, xend = 102, yend = Inf, color = "Upper Limit: 102.0%", linetype = "Upper Limit: 102.0%"), size = 1.5) +
+  scale_color_manual("Assay Limits", values = c("Lower Limit: 98.0%" = "red", "Upper Limit: 102.0%" = "green")) +
+  scale_linetype_manual("Assay Limits", values = c("Lower Limit: 98.0%" = "dashed", "Upper Limit: 102.0%" = "dashed")) +
+  labs(title="Initial Monte Carlo Simulation of Assay Distribution",
+       x="Assay (%)",
+       y="Frequency")
+
+
+
+# Calculate Spearman Rank Correlation
+cor_data <- data.frame(Assay, LOD, Total_Impurities, Solv1, Solv2, Solv3)
+spearman_rank <- cor(cor_data, method = "spearman")
+print("Spearman Rank Correlation with Assay:")
+print(spearman_rank[1,])
+
+# Calculate the percentage of Assay results within the initial specified limits
+within_limits_initial <- sum(Assay >= 98 & Assay <= 102) / n * 100
+outside_limits_initial <- 100 - within_limits_initial
+
+# Calculate Capability Indices for the initial distribution
+Cp_initial <- (102 - 98) / (2 * sd(Assay))
+Cpk_initial <- min((102 - mean(Assay)), (mean(Assay) - 98)) / sd(Assay)
+
+# Display percentages and Capability Indices for the initial distribution
+print(paste("Percentage within limits (Initial): ", within_limits_initial))
+print(paste("Percentage outside limits (Initial): ", outside_limits_initial))
+print(paste("Cp (Initial): ", Cp_initial))
+print(paste("Cpk (Initial): ", Cpk_initial))
+
+
+# Based on Spearman Rank, adjust the distributions
+# Strong negative correlation, focus on lower values for Solv1
+Solv1_adjusted <- rnorm(n, 0.08, 0.01)  
+
+# Strong positive correlation, focus on higher values for Solv2
+Solv2_adjusted <- rnorm(n, 0.12, 0.01)
+
+# Weak correlations, smaller or no adjustments for these
+LOD_adjusted <- rnorm(n, 0.2, 0.05)  # original distribution
+Total_Impurities_adjusted <- rnorm(n, 0.1, 0.02)  # original distribution
+Solv3_adjusted <- rnorm(n, 0.02, 0.005)  # original distribution
+
+# Plot adjusted distributions (Grouping of 2 or 3 could be done here depending on your preference)
+plot_histogram(data.frame(value=LOD_adjusted), "Adjusted Distribution of LOD", "LOD", 0.01, "blue", 0, 0.5)
+plot_histogram(data.frame(value=Total_Impurities_adjusted), "Adjusted Distribution of Total Impurities", "Total Impurities", 0.005, "green", 0, 0.5)
+plot_histogram(data.frame(value=Solv1_adjusted), "Adjusted Distribution of Solv1", "Solv1", 0.005, "purple", 0, 0.3)
+plot_histogram(data.frame(value=Solv2_adjusted), "Adjusted Distribution of Solv2", "Solv2", 0.005, "orange", 0, 0.3)
+plot_histogram(data.frame(value=Solv3_adjusted), "Adjusted Distribution of Solv3", "Solv3", 0.001, "brown", 0, 0.08)
+
+
+# Calculate Assay using the adjusted variables
+Assay_adjusted <- 101.255 - (4.647 * LOD_adjusted) - (22.58 * Total_Impurities_adjusted) - (210.4 * Solv1_adjusted) + (125.8 * Solv2_adjusted) + (171.0 * Solv3_adjusted)
+
+# Plot adjusted Assay distribution
+ggplot(data.frame(Assay_adjusted), aes(x=Assay_adjusted)) +
+  geom_histogram(binwidth=0.1, fill="green", alpha=0.7) +
+  geom_segment(aes(x = 98, y = 0, xend = 98, yend = Inf, color = "Lower Limit: 98.0%", linetype = "Lower Limit: 98.0%")) +
+  geom_segment(aes(x = 102, y = 0, xend = 102, yend = Inf, color = "Upper Limit: 102.0%", linetype = "Upper Limit: 102.0%")) +
+  scale_color_manual("Assay Limits", values = c("Lower Limit: 98.0%" = "red", "Upper Limit: 102.0%" = "blue")) +
+  scale_linetype_manual("Assay Limits", values = c("Lower Limit: 98.0%" = "dashed", "Upper Limit: 102.0%" = "dashed")) +
+  labs(title="Adjusted Monte Carlo Simulation of Assay Distribution",
+       x="Assay (%)",
+       y="Frequency")
+
+
+ggplot(data.frame(Assay_adjusted), aes(x=Assay_adjusted)) +
+  geom_histogram(binwidth=0.1, fill="green", alpha=0.7) +
+  geom_segment(aes(x = 98, y = 0, xend = 98, yend = Inf, color = "Lower Limit: 98.0%", linetype = "Lower Limit: 98.0%"), size = 1.5) +
+  geom_segment(aes(x = 102, y = 0, xend = 102, yend = Inf, color = "Upper Limit: 102.0%", linetype = "Upper Limit: 102.0%"), size = 1.5) +
+  scale_color_manual("Assay Limits", values = c("Lower Limit: 98.0%" = "red", "Upper Limit: 102.0%" = "blue")) +
+  scale_linetype_manual("Assay Limits", values = c("Lower Limit: 98.0%" = "dashed", "Upper Limit: 102.0%" = "dashed")) +
+  labs(title="Adjusted Monte Carlo Simulation of Assay Distribution",
+       x="Assay (%)",
+       y="Frequency")
+
+
+
+# Calculate the percentage of Assay results within the adjusted specified limits
+within_limits_adjusted <- sum(Assay_adjusted >= 98 & Assay_adjusted <= 102) / n * 100
+outside_limits_adjusted <- 100 - within_limits_adjusted
+
+# Calculate Capability Indices for the adjusted distribution
+Cp_adjusted <- (102 - 98) / (2 * sd(Assay_adjusted))
+Cpk_adjusted <- min((102 - mean(Assay_adjusted)), (mean(Assay_adjusted) - 98)) / sd(Assay_adjusted)
+
+# Display percentages and Capability Indices for the adjusted distribution
+print(paste("Percentage within limits (Adjusted): ", within_limits_adjusted))
+print(paste("Percentage outside limits (Adjusted): ", outside_limits_adjusted))
+print(paste("Cp (Adjusted): ", Cp_adjusted))
+print(paste("Cpk (Adjusted): ", Cpk_adjusted))
+
