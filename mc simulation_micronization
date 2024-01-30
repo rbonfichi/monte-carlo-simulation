@@ -1,0 +1,188 @@
+# MONTE CARLO SIMULATION OF A MICRONIZATION PROCESS
+
+
+# Monte Carlo Simulation Before Optimization 
+
+# The main focus of the code below is to run a Monte Carlo simulation to 
+# understand the initial particle size distribution and calculate the initial 
+# percentage of particles under 10 microns, all before proceeding with any 
+# optimizations. This simulation provides an important reference basis for 
+# evaluating the effectiveness of subsequent optimization actions..
+
+set.seed(123) # For reproducibility
+
+# Number of Monte Carlo simulations
+n_simulations <- 10000
+
+# Coefficients for the transfer equation
+beta0 <- 50
+beta1 <- -1.5
+beta2 <- -0.5
+beta3 <- 0.1
+beta12 <- 0.005
+
+# Initial ranges for input variables
+X1_range <- c(5, 15)   # Feed rate (kg/hr)
+X2_range <- c(50, 100) # Air pressure (psi)
+X3_range <- c(20, 80)  # Relative humidity (%)
+
+# Simulation of input variables
+X1 <- runif(n_simulations, X1_range[1], X1_range[2])
+X2 <- runif(n_simulations, X2_range[1], X2_range[2])
+X3 <- runif(n_simulations, X3_range[1], X3_range[2])
+
+
+# Generate histograms for input variables
+
+hist(X1, breaks = 50, 
+     main = "Feed rate initial distribution", 
+     xlab = "feed rate (kg/h)", 
+     col = "lightblue", border = "black",
+     xlim = c(5, 15), 
+     ylim = c(0, 350))
+
+# Add limit lines for values 5 and 15
+abline(v = 5, col = "red", lwd = 2, lty = 2)  # Lower limit line
+abline(v = 15, col = "blue", lwd = 2, lty = 2)  # Upper limit line
+
+# Manually add labels on the x-axis
+axis(1, at = seq(5, 15, by = 1))
+
+# Add a legend
+legend("topright",  # Place the legend at the top right
+       legend = c("Lower Limit", "Upper Limit"),
+       col = c("red", "blue"),
+       lwd = 2, lty = 2)
+
+
+hist(X2, breaks = 50, 
+     main = "Air pressure initial distribution", 
+     xlab = "pressure (psi)", 
+     col = "red", border = "black",
+     xlim = c(50, 100), 
+     ylim = c(0, 350))
+
+# Add limit lines for the 50 and 100 values
+abline(v = 50, col = "red", lwd = 2, lty = 2)  # Lower limit line
+abline(v = 100, col = "blue", lwd = 2, lty = 2)  # Upper limit line
+
+# Manually add labels on the x-axis
+axis(1, at = seq(50, 100, by = 5))
+
+# Add a legend higher up in the chart
+legend(x = "topright", y = NULL,  # Removes the default y position
+       legend = c("Lower Limit", "Upper Limit"),
+       col = c("red", "blue"),
+       lwd = 2, lty = 2,
+       inset = c(0, 0))  # Use the inset to move the legend up
+
+
+hist(X3, breaks = 50, 
+     main = "Relative Humidity initial distribution", 
+     xlab = "relative humidity (%)", 
+     col = "green", border = "black",
+     xlim = c(20, 80), 
+     ylim = c(0, 350))
+
+# Add limit lines for values 20 and 80
+abline(v = 20, col = "red", lwd = 2, lty = 2)  # Lower limit line
+abline(v = 80, col = "blue", lwd = 2, lty = 2)  # Upper limit line
+
+# Manually add labels on the x-axis
+axis(1, at = seq(20, 80, by = 5))
+
+# Add a legend higher up in the chart
+legend(x = "topright", y = NULL,  # Removes the default y position
+       legend = c("Lower Limit", "Upper Limit"),
+       col = c("red", "blue"),
+       lwd = 2, lty = 2,
+       inset = c(0, 0.1))  # Use the inset to move the legend up
+
+epsilon <- rnorm(n_simulations, 0, 5) # Random error term
+
+hist(epsilon, breaks = 50, 
+     main = "Random error term", 
+     xlab = "random error", 
+     col = "orange", border = "black",
+     xlim = c(-20, 20), 
+     ylim = c(0, 800))
+
+
+# Calculation of the output variable Y with the transfer equation
+
+Y <- beta0 + beta1*X1 + beta2*X2 + beta3*X3 + beta12*X1*X2 + epsilon
+
+# Calculation of the initial percentage of particles under 10 microns
+initial_percentage_below_10 <- mean(Y < 10) * 100
+print(initial_percentage_below_10)
+
+# Monte Carlo simulation before optimization
+Y_sim <- beta0 + beta1*X1 + beta2*X2 + beta3*X3 + beta12*X1*X2 + rnorm(n_simulations, 0, 5)
+
+# Particle size histogram from Monte Carlo simulation based on initial data
+hist(Y_sim, breaks = 50, 
+     main = "Monte Carlo simulation of particle size distribution based on initial data", 
+     xlab = "particle size (microns)", 
+     col = "lightblue", 
+     border = "black")
+
+# Add a vertical line at 10 microns
+abline(v = 10, col = "red", lwd = 2, lty = 2)
+
+# Add the legend with the percentage of particles below 10 microns
+text(x = 15, y = 400, labels = paste(initial_percentage_below_10, "% particles < 10 micron"), pos = 4, cex = 0.8)
+
+
+
+# Optimization
+
+# Objective function for optimization
+objective_function <- function(params) {
+  X1 <- params[1]
+  X2 <- params[2]
+  X3 <- params[3]
+  Y_sim <- beta0 + beta1*X1 + beta2*X2 + beta3*X3 + beta12*X1*X2 + rnorm(1000, 0, 5)
+  percentage_below_10 <- mean(Y_sim < 10) * 100
+  return(-percentage_below_10) # Minimize the negative to maximize
+}
+
+# Limits for variables
+bounds <- list(X1_range, X2_range, X3_range)
+
+# Starting point (we can use the midpoint of the ranges)
+initial_guess <- sapply(bounds, function(x) mean(x))
+
+# Optimization to maximize the percentage of particles under 10 microns
+library(optimx)
+result <- optimx(initial_guess, objective_function, method="L-BFGS-B", lower=sapply(bounds, `[`, 1), upper=sapply(bounds, `[`, 2))
+
+# Optimization results
+optimized_params <- result$par
+optimized_value <- -result$value # The negative of the minimized value is the actual percentage
+
+# Output of results
+print(paste("Optimized parameters:", paste("X1 =", result$p1, "X2 =", result$p2, "X3 =", result$p3)))
+
+print(paste("Optimized percentage of particles below 10 microns:", toString(optimized_value)))
+
+
+
+# New Monte Carlo simulation with optimized parameters
+
+Y_sim_optimized <- beta0 + beta1*10 + beta2*75 + beta3*50 + beta12*10*75 + rnorm(n_simulations, 0, 5)
+
+# Histogram of optimized particle sizes
+hist(Y_sim_optimized, breaks = 50, 
+     main = "Monte Carlo simulation of particle size distribution after parameters optimization", 
+     xlab = "particle size (microns)", 
+     col = "lightgreen", 
+     border = "black",
+     ylim = c(0, 900))  # Check that the upper limit is high enough
+
+# Add a vertical line at 10 microns
+abline(v = 10, col = "red", lwd = 2, lty = 2)
+
+# Add the legend with the percentage of particles under 10 microns
+# Replace the 'x' and 'y' values with the desired coordinates
+text(x = 10, y = 800, labels = paste("77.3%", "particles < 10 micron"), pos = 4, cex = 0.8)
+
