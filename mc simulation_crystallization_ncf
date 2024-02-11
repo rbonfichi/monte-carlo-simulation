@@ -1,0 +1,93 @@
+
+# Crystallization : example mentioned in NCF publication
+
+
+set.seed(123)  # Ensure reproducibility
+
+# Number of simulations
+n_simulations <- 10000
+
+# Generating random samples for X1 (molar concentration) and X2 (temperature)
+X1 <- runif(n_simulations, min = 0.5, max = 1.5)  # Molar concentration
+X2 <- runif(n_simulations, min = 20, max = 30)    # Temperature
+
+
+# Generate histograms for input variables
+
+
+hist(X1, breaks = 50, 
+     main = "Molar Concentration initial distribution", 
+     xlab = "molar concentration (M)", 
+     col = "lightblue", border = "black",
+     xlim = c(0.4, 1.6), 
+     ylim = c(0, 330))
+
+# Add limit lines for values 0.5 and 1.5
+abline(v = 0.5, col = "red", lwd = 2, lty = 2)  # Lower limit line
+abline(v = 1.5, col = "blue", lwd = 2, lty = 2)  # Upper limit line
+
+# Manually add labels on the x-axis
+axis(1, at = seq(5, 15, by = 1))
+
+# Add a legend
+legend("topright",  # Place the legend at the top right
+       legend = c("Lower Limit", "Upper Limit"),
+       col = c("red", "blue"),
+       lwd = 2, lty = 2)
+
+
+
+hist(X2, breaks = 50, 
+     main = "Temperature initial distribution", 
+     xlab = "temperature (°C)", 
+     col = "orange", border = "black",
+     xlim = c(20, 30), 
+     ylim = c(0, 350))
+
+# Add limit lines for values 20 and 30
+abline(v = 20, col = "red", lwd = 2, lty = 2)  # Lower limit line
+abline(v = 30, col = "blue", lwd = 2, lty = 2)  # Upper limit line
+
+# Manually add labels on the x-axis
+axis(1, at = seq(5, 15, by = 1))
+
+# Add a legend
+legend("topright",  # Place the legend at the top right
+       legend = c("Lower Limit", "Upper Limit"),
+       col = c("red", "blue"),
+       lwd = 2, lty = 2)
+
+
+# Calculate Y using the transfer equation
+Y_0 <- 50
+a <- 10
+b <- -0.5
+c <- 0.2
+Y <- Y_0 + a*X1 + b*X2 + c*(X1*X2)
+
+
+# Crystal Yield  histogram from Monte Carlo simulation based on initial data
+hist(Y, breaks = 50, 
+     main = "Monte Carlo simulation of crystal yield distribution based on initial data", 
+     xlab = "crystal yield (kg)", 
+     col = "green", 
+     border = "black",
+     xlim = c(42, 64),
+     ylim = c(0, 400))
+
+
+print(paste("Y mean =", round(mean(Y), digits = 2)))
+print(paste("Y standard deviation =", round(sd(Y), digits=3)))
+
+
+# Find the maximum yield and corresponding values of X1 and X2
+optimal_index <- which.max(Y)
+optimal_Y <- Y[optimal_index]
+optimal_X1 <- X1[optimal_index]
+optimal_X2 <- X2[optimal_index]
+
+# Print the optimal conditions and yield
+cat("Optimal Molar Concentration (X1):", optimal_X1, "M\n")
+cat("Optimal Temperature (X2):", optimal_X2, "°C\n")
+cat("Optimal Yield (Y):", optimal_Y, "\n")
+
