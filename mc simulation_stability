@@ -1,0 +1,57 @@
+# Stability Analysis
+
+# A pharmaceutical company needs to predict the shelf life of a new drug stored 
+# at various conditions.
+
+# Example:
+
+# The degradation rate of the drug follows a first-order kinetics model, with the
+# rate constant k increasing with temperature and humidity.
+# Temperature: Normal distribution, mean = 25°C, SD = 5°C.
+# Humidity: Normal distribution, mean = 60%, SD = 10%.
+# Simulating degradation over 12 months, the company can estimate the probability
+# of the drug maintaining at least 90% of its original potency under different 
+# storage conditions.
+# The simulation might predict a 95% confidence shelf life of 24 months at 
+# 25°C/60% RH, aiding in labeling and packaging decisions.
+
+
+
+set.seed(123) # For reproducibility
+
+# Number of simulations
+n_simulations <- 10000
+
+# Generating random samples for temperature and humidity
+temperatures <- rnorm(n_simulations, mean = 25, sd = 2) # °C
+humidity <- rnorm(n_simulations, mean = 60, sd = 5) # %
+
+hist(temperatures)
+hist(humidity)
+
+
+# Model parameters (hypothetical values for illustration)
+k0 <- 0.1 # Baseline rate constant per month at reference conditions
+alpha <- 0.02 # Temperature coefficient
+beta <- 0.01 # Humidity coefficient
+T0 <- 25 # Reference temperature °C
+H0 <- 60 # Reference humidity %
+C0 <- 100 # Initial drug concentration (% of original potency)
+
+# Calculating rate constant k for each simulation
+k <- k0 * (1 + alpha * (temperatures - T0) + beta * (humidity - H0))
+
+hist(k)
+
+# Calculating remaining potency after 12 months
+time <- 12 # months
+C_t <- C0 * exp(-k * time)
+hist(C_t, main = "Histogram of remaining potency after 12 months", xlab = "Potency (%)", col = "steelblue")
+mean(C_t)
+
+# Assessing shelf life based on criterion of at least 90% remaining potency
+shelf_life_criteria <- sum(C_t >= 90) / n_simulations * 100
+
+# Printing the result
+cat("Percentage of simulations with at least 90% potency after 12 months:", shelf_life_criteria, "%\n")
+
