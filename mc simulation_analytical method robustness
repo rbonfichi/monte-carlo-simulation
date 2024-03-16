@@ -1,0 +1,75 @@
+# Robustness evaluation of an analytical method
+
+# A QC laboratory wants to evaluate an HPLC method for measuring the concentration
+# of an active pharmaceutical ingredient (API) in a drug product.
+
+# Example:
+
+# Suppose that we have:
+# Column temperature: Normally distributed around 30°C with a standard deviation
+# of 1°C.
+# Flow rate: Normally distributed around 1 mL/min with a standard deviation of
+# 0.05 mL/min.
+# Monte Carlo simulation can help in studying this analytical method by accounting
+# for variability in column temperature and flow rate, which can affect the 
+# measurement accuracy.
+
+library(ggplot2)
+library(gridExtra)
+
+set.seed(123) # For reproducibility
+
+# Number of simulations
+n_simulations <- 10000
+
+# Generating random samples for column temperature and flow rate
+temperatures <- rnorm(n_simulations, mean = 30, sd = 1) # Normally distributed around 30°C
+flow_rates <- rnorm(n_simulations, mean = 1, sd = 0.05) # Normally distributed around 1 mL/min
+
+hist(temperatures)
+hist (flow_rates)
+
+# Coefficients for sensitivity to temperature and flow rate
+a <- -0.2 # mg/mL/°C
+b <- 50 # mg/mL/(mL/min)
+
+# Calculate measured API concentrations using the transfer equation
+delta_T <- temperatures - 30
+delta_F <- flow_rates - 1
+C <- 100 + delta_T * a + delta_F * b
+
+
+
+# Istogramma di C
+p1 <- ggplot() + geom_histogram(aes(x=C), binwidth = 1, fill="skyblue", color="black") +
+  ggtitle("Histogram of API Concentrations (C)") +
+  xlab("Concentration") + ylab("Frequency")
+p1
+
+# Boxplot di C
+p2 <- ggplot() + geom_boxplot(aes(y=C), fill="lightblue", color="black") +
+  ggtitle("Boxplot of API Concentrations (C)") +
+  xlab("") + ylab("Concentration")
+
+p2
+# Scatter plot di C vs delta_T
+p3 <- ggplot() + geom_point(aes(x=delta_T, y=C), color="tomato", alpha=0.5) +
+  ggtitle("C vs. Temperature Variation (delta_T)") +
+  xlab("Temperature Variation (°C)") + ylab("Concentration")
+p3
+# Scatter plot di C vs delta_F
+p4 <- ggplot() + geom_point(aes(x=delta_F, y=C), color="lightgreen", alpha=0.5) +
+  ggtitle("C vs. Flow Rate Variation (delta_F)") +
+  xlab("Flow Rate Variation (mL/min)") + ylab("Concentration")
+p4
+# Combining charts in a single layout
+grid.arrange(p1, p2, p3, p4, ncol=2)
+
+
+
+# Analysis of results to assess method robustness
+within_tolerance <- sum(C >= 98 & C <= 102) / n_simulations * 100
+
+# Printing the percentage of results within the ±2% tolerance
+cat("Percentage of results within ±2% of the nominal concentration:", within_tolerance, "%\n")
+
